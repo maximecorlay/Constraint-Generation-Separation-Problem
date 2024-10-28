@@ -1,0 +1,39 @@
+La recherche optimale dans les graphes sert à modéliser tous les problèmes du type : voyageur de commerce, plus court chemin etc
+
+En recherche opérationnelle dans les graphes, il faut ajouter des contraintes spécifiques si le chemin optimal doit être connexe (c'est souvent le cas). 
+
+Ces contraintes sont souvent du type :
+
+\item Polynomiale \\
+On ajoute des $u_i \in \mathbb{N}$ tels que pour tout $i,j \in [|1,n|]$:
+
+$$u_j \geq u_i + 1 - n(1-x_{ij})$$ (\textbf{contrainte MTZ})
+
+MTZ = Miller-Tucker-Zemlin
+
+\item Exponentielle \\
+Pour tout $S$ inclus dans $V$ tel que $1 \leq |S| \leq |V|-1$,
+
+$$\sum_{i \in S   j \in S} x_{ij} \leq |S|-1$$  (\textbf{contrainte DFJ})
+
+DFJ = Dantzig-Fulkerson-Johnson
+\end{itemize}
+
+Ici, sans s'attarder sur les défauts de la contrainte MTZ (elle en a sinon on ne s'intéresserait pas à la contrainte exponentielle), on voit bien que la contrainte DFJ apporte un nombre exponentiel de contraintes (2^n)
+
+C'est très embêtant car cela demande beaucoup de calculs à l'algorithme du simplexe.
+
+Pour rappel, dans Column-Generation-Pumpkin, on avait "trop" de variables : la génération de colonnes permettait de partir d'une "intuition" sur les variables utiles (et d'oublier les autres).
+
+Ici c'est pareil, mais avec les contraintes. Voici comment on procède :
+
+1) Résoudre le problème maître sans contrainte DFJ ; on obtient une solution x
+2) Regarder s'il existe un S tel que la contrainte sur S est violée par x. En pratique, on cherche donc à trouver S qui maximise $$\sum_{i \in S   j \in S} x_{ij} - |S|+1$$.
+On réécrit ceci avec des variables z_i : z_i=1 ssi $i \in S$
+Le problème se réécrit Max $$\sum_{i,j \in [|1,n|]} z_i z_j - \sum_{i=1}^{n} z_i +1$$ sous la contrainte $\sum_{i=1}^{n} z_i \geq 1$ (parce que S est non vide)
+Ce n'est pas un problème linéaire (PL) donc on introduit des variables $w_ij=z_i z_j$ et des contraintes $w_ij \geq 0$ , $w_ij \geq z_i + z_j -1 $, $w_ij \leq z_i $ et $ w_ij \leq z_j$. 
+On appelle ce problème un "problème de séparation". Dans ce problème, les x_ij (coordonnées de la solution x trouvée en 1)) deviennent des DONNEES et ne sont plus des variables
+Deux issues possibles:
+* soit la solution est <=0  (dans ce cas le x trouvé en 1) vérifie toutes les contraintes DFJ et c'est terminé : x est optimal)
+* soit la solution est >0 (dans ce cas on ajoute la contrainte S de l'Argmax aux contraintes du problème maître et on repart en 1)) . Remarque : on ajoute toujours des contraintes au pb maître, on n'en enloève jamais
+
